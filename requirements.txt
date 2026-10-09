@@ -1,0 +1,13 @@
+# Core numerics
+numpy
+scipy
+pandas
+
+# Symbolic math (derivatives, integrals, limits)
+sympy
+
+# Plotting
+matplotlib
+
+# Jupyter kernel for this project's venv
+ipykernel
