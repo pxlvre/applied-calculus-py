@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/lagrange-wordmark-dark.svg" alt="lagrange" width="340">
+</p>
+
 # lagrange
 
 Analyze and plot a real function of one real variable, the way a calculus course asks you to.
@@ -80,9 +84,14 @@ plot(result)
 | `report.py` | the text report |
 | `terminal_image.py` | typeset formulas shown inline in the terminal |
 | `plotting.py`, `theme.py` | the figure and its palette |
+| `assets/` | the plot window's icon (shipped with the package) |
 | `cli.py` | the `lagrange` command |
 
 ## Develop
+
+Logo and wordmark sources live in `docs/assets/`. The window icon,
+`src/lagrange/assets/icon.png`, is `lagrange-icon-light.svg` rendered at 512 px with the
+artwork in the middle 80%, the margin macOS gives Dock icons.
 
 ```bash
 pip install -e ".[dev]"

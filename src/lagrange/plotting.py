@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
+from importlib import resources
+
 import matplotlib.pyplot as plt
 import numpy as np
 import sympy as sp
@@ -88,7 +91,29 @@ def plot(a: Analysis, xlim: tuple[float, float] | None = None) -> plt.Figure:
     ax_d2f.set_xlabel(a.x.name, color=COLORS["ink2"])
     _legend(fig, a)
     fig.tight_layout(rect=(0, 0.06, 1, 1))
+    _use_app_icon(fig)
     return fig
+
+
+def _use_app_icon(fig: plt.Figure) -> None:
+    """Put lagrange's icon, not matplotlib's, on the plot window (the Dock icon on macOS)."""
+    manager = fig.canvas.manager
+    if manager is None:  # no window: a notebook, or a figure being saved
+        return
+    icon = str(resources.files("lagrange") / "assets" / "icon.png")
+    backend = plt.get_backend().lower()
+    # Cosmetic, so a backend that refuses keeps matplotlib's icon rather than fail the plot.
+    with suppress(ImportError, AttributeError, OSError, RuntimeError):
+        if backend == "macosx":
+            from matplotlib.backends import _macosx
+            _macosx.FigureManager.set_icon(icon)
+        elif backend.startswith("tk"):
+            import tkinter as tk
+            with suppress(tk.TclError):
+                manager.window.iconphoto(False, tk.PhotoImage(master=manager.window, file=icon))
+        elif backend.startswith("qt"):
+            from matplotlib.backends.qt_compat import QtGui
+            manager.window.setWindowIcon(QtGui.QIcon(icon))
 
 
 # ── Ranges ────────────────────────────────────────────────────────────────────
