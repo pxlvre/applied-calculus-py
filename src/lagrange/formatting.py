@@ -2,24 +2,104 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
+from typing import Literal
+
 import sympy as sp
+from sympy.printing.precedence import PRECEDENCE
+from sympy.printing.str import StrPrinter
+
+type Display = Literal["text", "pretty", "latex", "image"]
+DISPLAYS: tuple[Display, ...] = ("text", "pretty", "latex", "image")
+
+_display: ContextVar[Display] = ContextVar("display", default="text")
+
+
+@contextmanager
+def display_mode(mode: Display) -> Iterator[None]:
+    """Write expressions in ``mode`` for the duration of the block."""
+    token = _display.set(mode)
+    try:
+        yield
+    finally:
+        _display.reset(token)
+
+
+def current_display() -> Display:
+    return _display.get()
+
+
+def show(v: sp.Expr) -> str:
+    """One expression, on one line, in the current display mode."""
+    match _display.get():
+        case "latex":
+            return f"${sp.latex(v)}$"
+        case "pretty" | "image":
+            return _UnicodePrinter().doprint(v)
+        case _:
+            return sp.sstr(v)
+
+
+_SUPERSCRIPT = str.maketrans("0123456789-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁻")
+
+
+class _UnicodePrinter(StrPrinter):
+    """sstr with textbook symbols but still one line: √2/2, x², π, ℯ."""
+
+    def doprint(self, expr: sp.Expr) -> str:
+        return super().doprint(expr).replace("**", "^").replace("*", "⋅")
+
+    def _print_Pow(self, expr: sp.Pow, rational: bool = False) -> str:
+        base, exp = expr.as_base_exp()
+        if exp is sp.S.Half:
+            return "√" + self.parenthesize(base, PRECEDENCE["Pow"])
+        if exp == -sp.S.Half:
+            return "1/√" + self.parenthesize(base, PRECEDENCE["Pow"])
+        if exp.is_Integer:
+            return (self.parenthesize(base, PRECEDENCE["Pow"], strict=False)
+                    + str(exp).translate(_SUPERSCRIPT))
+        return super()._print_Pow(expr, rational)
+
+    def _print_exp(self, expr: sp.Expr) -> str:
+        (arg,) = expr.args
+        bare = arg.is_Symbol or (arg.is_Integer and arg >= 0)
+        return f"ℯ^{self._print(arg)}" if bare else f"ℯ^({self._print(arg)})"
+
+    def _print_Pi(self, expr: sp.Expr) -> str:
+        return "π"
+
+    def _print_Exp1(self, expr: sp.Expr) -> str:
+        return "ℯ"
+
+    def _print_Infinity(self, expr: sp.Expr) -> str:
+        return "∞"
+
+    def _print_NegativeInfinity(self, expr: sp.Expr) -> str:
+        return "−∞"
 
 
 def fmt(v: sp.Expr | None) -> str:
     """Exact form when it is short, plus a decimal approximation when useful."""
     if v is None:
         return "undefined"
+    latex = _display.get() == "latex"
     if v in (sp.oo, -sp.oo):
-        return "∞" if v == sp.oo else "−∞"
+        return show(v) if latex else "∞" if v == sp.oo else "−∞"
     if v.is_Integer or v.is_Rational:
-        return sp.sstr(v)
+        return show(v)
     if v.is_Float:
-        return f"{float(v):.6g}"
-    return f"{sp.sstr(v)} ≈ {float(sp.N(v)):.6g}"
+        return f"${float(v):.6g}$" if latex else f"{float(v):.6g}"
+    if latex:
+        return f"${sp.latex(v)} \\approx {float(sp.N(v)):.6g}$"
+    return f"{show(v)} ≈ {float(sp.N(v)):.6g}"
 
 
 def fmt_set(s: sp.Set) -> str:
     """Write a set the way a textbook would: (−∞, 0) ∪ (0, ∞)."""
+    if _display.get() == "latex":
+        return f"${sp.latex(s)}$"
     match s:
         case _ if s is sp.S.EmptySet:
             return "∅"
@@ -35,12 +115,12 @@ def fmt_set(s: sp.Set) -> str:
             return "{" + ", ".join(fmt_bound(p) for p in s) + "}"
         case sp.ImageSet():
             (n,) = s.lamda.variables
-            return f"{{{sp.sstr(s.lamda.expr.subs(n, sp.Symbol('k')))} : k ∈ ℤ}}"
+            return f"{{{show(s.lamda.expr.subs(n, sp.Symbol('k')))} : k ∈ ℤ}}"
         case sp.Complement() if s.args[0] == sp.S.Reals:
             removed = fmt_set(s.args[1])
             return f"ℝ \\ ({removed})" if isinstance(s.args[1], sp.Union) else f"ℝ \\ {removed}"
         case _:
-            return sp.sstr(s)
+            return show(s)
 
 
 def _sort_key(s: sp.Set) -> float:
@@ -53,7 +133,9 @@ def _sort_key(s: sp.Set) -> float:
 def fmt_bound(v: sp.Expr) -> str:
     if v.is_Float:
         return f"{float(v):.6g}"
-    return {sp.oo: "∞", -sp.oo: "−∞"}.get(v, sp.sstr(v))
+    if _display.get() == "latex":
+        return show(v)
+    return {sp.oo: "∞", -sp.oo: "−∞"}.get(v, show(v))
 
 
 def fmt_short(v: sp.Expr) -> str:

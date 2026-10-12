@@ -8,6 +8,7 @@ from collections.abc import Sequence
 
 from .analysis import analyze
 from .config import DEFAULT_WINDOW
+from .formatting import DISPLAYS
 from .plotting import plot
 from .report import report
 
@@ -29,6 +30,10 @@ def build_parser() -> argparse.ArgumentParser:
                         default=DEFAULT_WINDOW,
                         help="x-range used when f has infinitely many features "
                              f"(default: {DEFAULT_WINDOW[0]:g} {DEFAULT_WINDOW[1]:g})")
+    parser.add_argument("--display", choices=DISPLAYS, default="text",
+                        help="how to write the math: text (plain, the default), pretty "
+                             "(Unicode, 2-D), latex (LaTeX source) or image (typeset inline; "
+                             "needs iTerm2, Kitty, WezTerm or Ghostty)")
     parser.add_argument("--no-plot", action="store_true", help="print the report only")
     parser.add_argument("--save", metavar="PATH", help="write the plot to PATH instead of showing it")
     return parser
@@ -47,7 +52,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"lagrange: {error}", file=sys.stderr)
         return 2
 
-    report(result)
+    report(result, args.display)
     if not args.no_plot:
         import matplotlib.pyplot as plt
 

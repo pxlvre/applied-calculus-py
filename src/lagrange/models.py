@@ -8,7 +8,7 @@ from typing import Literal
 
 import sympy as sp
 
-from .formatting import fmt
+from .formatting import fmt, show
 
 type Chart = list[tuple[sp.Interval, int | None]]
 """A sign chart: the sign of an expression on each piece of a split region."""
@@ -53,8 +53,8 @@ class Asymptote:
 
     def __str__(self) -> str:
         if self.kind == "vertical":
-            return f"vertical   x = {sp.sstr(self.rhs)}"
-        return f"{self.kind:<10} y = {sp.sstr(self.rhs)}  (as {self.where})"
+            return f"vertical   x = {show(self.rhs)}"
+        return f"{self.kind:<10} y = {show(self.rhs)}  (as {self.where})"
 
 
 @dataclass

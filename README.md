@@ -33,11 +33,23 @@ lagrange "x/(x^2 - 4)"
 lagrange "sin(t)" t           # a different variable
 lagrange "x^4 - 2x^2" --no-plot
 lagrange "exp(-x^2)" --save bell.png
+lagrange "exp(-x^2)" --display pretty
 ```
 
 Quote the function so the shell leaves `^`, `*` and `(` alone. Input is forgiving:
 `2x` means `2*x`, `sin x` means `sin(x)`, `x^2` means `x**2`, and `ln` is the natural log.
 Run `lagrange` with no arguments and it asks for the function instead.
+
+`--display` picks how the math is written:
+
+| Mode | Looks like | Notes |
+| --- | --- | --- |
+| `text` (default) | `-2*x*exp(-x**2)`, `sqrt(2)/2` | plain SymPy syntax |
+| `pretty` | `f, f′, f″` laid out in 2-D; `√2/2`, `ℯ^(-1/2)`, `π` inline | Unicode, any terminal |
+| `latex` | `$- 2 x e^{- x^{2}}$`, `$\frac{\sqrt{2}}{2}$` | LaTeX source to paste into notes |
+| `image` | every line with math typeset as an image, in LaTeX's Computer Modern | iTerm2, Kitty, WezTerm or Ghostty; falls back to `pretty` elsewhere |
+
+`image` uses matplotlib's mathtext, so no TeX installation is needed.
 
 Functions with infinitely many features (`sin`, `tan`, …) are reported on a window,
 `[-10, 10]` by default; change it with `--window LO HI`.
@@ -66,6 +78,7 @@ plot(result)
 | `models.py` | the result types (`Analysis`, `CriticalPoint`, `Singularity`, …) |
 | `formatting.py` | writing SymPy objects the way a textbook would |
 | `report.py` | the text report |
+| `terminal_image.py` | typeset formulas shown inline in the terminal |
 | `plotting.py`, `theme.py` | the figure and its palette |
 | `cli.py` | the `lagrange` command |
 
